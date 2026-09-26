@@ -1,0 +1,16 @@
+---
+title: "Lecture 2 Exercise 1"
+author:
+  - name: Louise Forster
+    orcid: 0009-0007-2065-6989
+format: revealjs
+editor: visual
+---
+
+## Favourite equation
+
+$$P(X) = \frac{\lambda^xe^{-\lambda}}{X!} $$
+
+## Source information about me
+
+I despise the smell of oranges. Especially when I peel an orange and the smell remains on my hands and doesn't disappear no matter how much soap I use. Therefore, i don't eat oranges unless someone peels them for me. 
