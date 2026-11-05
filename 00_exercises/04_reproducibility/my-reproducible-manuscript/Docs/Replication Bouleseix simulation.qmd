@@ -1,0 +1,166 @@
+---
+title: "Replication of Boulesteix et al.’s simulation"
+format: html
+---
+
+## Installing the libraries
+```{r}
+#| results: 'hide'
+#| message: false
+library(Hmisc)
+library(mice)
+library(tidyverse)
+```
+
+
+## Reading in the data
+
+```{r}
+#| results: 'hide'
+d1 <- sasxport.get("DEMO_I.xpt")
+d2 <- sasxport.get("BPX_I.xpt")
+d3 <- sasxport.get("BMX_I.xpt")
+d4 <- sasxport.get("GHB_I.xpt")
+d5 <- sasxport.get("TCHOL_I.xpt")
+```
+
+
+## Putting the data in a format compatible to the intended analysis 
+
+```{r}
+d1.t <- subset(d1,select=c("seqn","riagendr","ridageyr"))
+d2.t <- subset(d2,select=c("seqn","bpxsy1"))
+d3.t <- subset(d3,select=c("seqn","bmxbmi"))
+d4.t <- subset(d4,select=c("seqn","lbxgh"))
+d5.t <- subset(d5,select=c("seqn","lbdtcsi"))
+
+d <- merge(d1.t,d2.t)
+d <- merge(d,d3.t)
+d <- merge(d,d4.t)
+d <- merge(d,d5.t)
+```
+
+
+### Renaming variables for easier understanding. Please refer to the README.md file for the description of the variables
+
+```{r}
+d$age <- d$ridageyr
+d$sex <- d$riagendr
+d$bp <- d$bpxsy1
+d$bmi <- d$bmxbmi
+d$HbA1C <- d$lbxgh
+d$chol <- d$lbdtcsi
+d$age[d$age < 18] <- NA
+```
+
+
+### Selecting complete cases
+
+```{r}
+dc <- cc(subset(d,select=c("age","sex","bmi","HbA1C","bp")))
+```
+
+
+## preliminary analysis
+
+```{r}
+# Adjusing for age, sex 
+summary(lm(bp ~ HbA1C + age + as.factor(sex), data=dc))
+confint(lm(bp ~ HbA1C + age + as.factor(sex), data=dc))
+
+# Controlling for BMI
+summary(lm(bp ~ HbA1C + bmi + age + as.factor(sex), data=dc))
+confint(lm(bp ~ HbA1C + bmi + age + as.factor(sex), data=dc))
+```
+
+
+### Interpretation of the preliminary analysis
+In the preliminary analysis the first linear regression showed that HbA1C was a positively association witg systolic blood pressure. A one-unit increase in HbA1C was association with a 1.13 mmHg (95% CI [0.73, 1.52]) increase in systolic blood pressure. After adjusting for BMI, the estimate for HbA1C decreased noticeably but remained positive; a one-unit increase in HbA1C was associated with a 0.75 mmHg (95% CI [0.35, 1.56]) increase in systolic blood pressure.
+
+The decrease in the estimate indicates that the effect of HbA1C on systolic blood pressure is partially accounted for by BMI. BMI can thus be a confounding variable.
+
+
+## Simulation
+This is step of the study where measurement error is added to the exposure variables
+
+```{r}
+#| results: 'hide'
+# calculating the true effect of HbA1C op blood pressure, controlled by bmi, age and sex
+ref <- lm(bp ~ HbA1C + bmi + age + as.factor(sex), data=dc)$coef[2]
+
+# number of simulations is 1000
+n.sim <- 1e3
+
+# establishing different percentages of measurement error from 0% until 50% in steps of 10%. this is for the exposure variable HbA1c
+perc.me.exp <- seq(0,.5,.1)
+
+# establishing different percentages of measurement error from 0% until 50% in steps of 10%. this is for the confounding variable BMI
+perc.me.conf<- seq(0,.5,.1)
+
+# combining them all into 36 possible scenarios, such 10% measurement error HbA1C and 0% BMI, or 0% measurement error on HbA1C and 40% on BMI 
+scenarios <- expand.grid(perc.me.exp,perc.me.conf)
+
+# the true variance of HbA1c
+var.exp <- var(dc$HbA1C)
+
+# the true variance of HbA1c
+var.conf <- var(dc$bmi)
+
+n <- dim(dc)[1]
+
+# making a empty matrix with 1000 rows (for the number of simulations) and 36 columns (for al the scenarios)
+beta.hat <- matrix(ncol = dim(scenarios)[1], nrow = n.sim)
+
+# this loop will run a 1000 times through each of the 36 scenarios
+for (k in 1:n.sim){
+  print(k)
+  set.seed(k)
+  for (i in 1:dim(scenarios)[1]){
+    
+    # On the basis of the scenario-percentage, the code will calculate the extra noise that needs to be added.
+    var.me.exp <- var.exp*scenarios[i,1]/(1-scenarios[i,1])
+    
+    var.me.conf <- var.conf*scenarios[i,2]/(1-scenarios[i,2])
+    
+    # with rnorm random normaly distributed noise will be generated and added to the original HbA1C and BMI value
+    dc$HbA1C.me <- dc$HbA1C + rnorm(dim(dc)[1], 0, sqrt(var.me.exp) )
+    
+    dc$bmi.me <- dc$bmi + rnorm(dim(dc)[1], 0, sqrt(var.me.conf) )
+   
+    # running a new regression analysis with the variables that have the added noise HbA1c.me and bmi.me and saving the results in a matrix. 
+    beta.hat[k,i] <- lm(bp ~ HbA1C.me + age + bmi.me + as.factor(sex), data=dc)$coef[2]
+  }}
+```
+
+
+## Creating a figure
+Here a figure is created showing the results of the simulation. It can observed how the introduction of measurement error to the exposure variables HbA1c and BMI can influence the relations they have to the outcome variable systolic blood pressure 
+
+```{r}
+tot.mat <- cbind(100 * scenarios, apply(beta.hat, 2, mean))
+
+colnames(tot.mat) <- c("me.exp","me.conf","estimate")
+
+FIGURE <- ggplot(tot.mat, aes(me.exp, me.conf)) +
+  geom_tile(color="white",aes(fill = estimate)) +
+  geom_text(aes(label = round(estimate, 2))) +
+  scale_fill_gradient2(low="#D55E00",mid="white",high = "#56B4E9", midpoint=ref) +
+  labs(x=paste("% of total variance of HbA1c due to measurement error"),
+       y=paste("% of total variance of BMI due to measurement error")) +
+  coord_equal()+
+  scale_y_continuous(breaks=unique(tot.mat[,1]))+
+  scale_x_continuous(breaks=unique(tot.mat[,1]))+
+  theme(panel.background = element_rect(fill='white', colour='grey'),
+        plot.title=element_text(hjust=0),
+        axis.ticks=element_blank(),
+        axis.title=element_text(size=12),
+        axis.text=element_text(size=10),
+        legend.title=element_text(size=12),
+        legend.text=element_text(size=10))
+FIGURE
+ggsave("Simulation_results_visualisation.pdf")
+```
+
+
+### Interpretation of the simulation results
+This figure shows that the introduction of measurement error to the HbA1c exposure variable severely weakened its relationship with systolic blood pressure, with the estimate decreasing from 0.75 to 0.35. In contrast, adding measurement error to the BMI confounding variable strengthened the observed relationship of HbA1C, causing the estimate to increase from 0.75 to 0.94. Additionally, in this specific scenario, the measurement errors of both variables appear to balance each other out. Imprecise measurement of BMI prevents it from fully confounding the model (which would artificially inflate the estimate), while the measurement error in HbA1C is prevented from severly decreasing the effect size.  
