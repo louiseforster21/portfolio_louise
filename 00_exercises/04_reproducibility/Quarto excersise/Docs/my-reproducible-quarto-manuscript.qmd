@@ -1,0 +1,72 @@
+---
+title: "My Reproducible Manuscript"
+author: "Louise Forster"
+format: pdf
+bibliography: references.bib
+---
+```{r}
+library(ggplot2)
+```
+
+## Meet Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org/>.
+
+## Meet the penguins
+
+The `penguins` data from the [palmerpenguins](https://allisonhorst.github.io/palmerpenguins/) package contains size measurements for344 penguins from three species observed on three islands in the Palmer Archipelago, Antarctica. More about this package can be found in this paper written by @horstPalmerArchipelagoPenguins2022. Apparently, the penguins dataset was created in efforts to create a more realisitc dataset that can be used for practice. The usual iris dataset, one of the best-known and widely used data sets, is seen as quite unrealistic in terms of its setup and the origins are a bit of a mystery [@unwinIrisDataSet2021].
+
+![](https://allisonhorst.github.io/palmerpenguins/reference/figures/lter_penguins.png)
+
+## Results 
+
+```{r}
+#| include: false
+penguins <- read.csv("../data/data.csv")
+```
+
+#### I made adjustment to the chunk to not show the code that is being used to generate the plot as well as not displaying the warning messages that arises.
+```{r}
+#| echo: false
+#| warning: false
+ggplot(penguins, 
+       aes(x = `Flipper.Length..mm.`, y = `Culmen.Length..mm.`)) +
+        geom_point(aes(color = Species, shape = Species)) +
+        scale_color_manual(values = c("darkorange","purple","cyan4")) +
+        labs(
+                title = "Flipper and Culmen length",
+                subtitle = "Dimensions for penguins at Palmer Station LTER",
+                x = "Flipper length (mm)", y = "Culmen length (mm)",
+                color = "Penguin species", shape = "Penguin species"
+        ) +
+        theme_minimal()
+```
+
+## Inline code
+There are `r 3*1` species of penguins in this dataset. Per species there are `r sum(penguins$Species=='Gentoo penguin (Pygoscelis papua)')` Gentoo penguins, `r sum(penguins$Species=='Chinstrap penguin (Pygoscelis antarctica)')` Chinstrap penguins and lastly `r sum(penguins$Species=='Adelie Penguin (Pygoscelis adeliae)')` Adelie penguins. In total, there are `r length(penguins$X)` penguins in the dataset.
+
+
+## Sourcing Scripts
+```{r}
+do_addition <- function(number1, number2){
+        
+        # Check that arguments provided are numberic
+        if(class(number1) != "numeric" | class(number2) != "numeric"){
+                print("Error: one or more of your inputs are not numeric")
+                
+        # Perform simple addition and return the result
+        } else{
+                result <- number1 + number2
+                return(result)
+        }
+}
+```
+
+```{r}
+# first test
+do_addition(3, 4)
+
+# second test
+do_addition(837, 283)
+```
+
