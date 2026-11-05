@@ -12,7 +12,7 @@ In the compodium you fill find different files, namely:
   3. BMX_I.xpt -> Body Measures
   4. GHB_I.xpt -> Glycohemoglobin
   5. TCHOL_I.xpt -> Cholesterol - Total
-- ## Docs: The docs contains the following two documents related to the replicaion
+- ## Docs: The docs contains the following documents related to the replicaion
   1. Replication Bouleseix simulation.qmd - The Quarto document containing the R code and explenations used to replicate the simulation study.
   2. Replication Boulesteix simulation.html - The rendered HTML version of the Quarto document.
   3. Renv.lock - can be used to obain the package versions used during this analyses
